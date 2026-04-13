@@ -3,7 +3,7 @@ import { Geist } from "next/font/google";
 import { Suspense } from "react";
 import WeatherBackdrop from "@/components/WeatherBackdrop";
 import WeatherBackdropLoader from "@/components/WeatherBackdropLoader";
-import { FALLBACK_ATMOSPHERE_CSS } from "@/lib/weather/spb-atmosphere";
+import { FALLBACK_ATMOSPHERE } from "@/lib/weather/spb-atmosphere";
 import "./globals.css";
 
 const geist = Geist({
@@ -24,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`${geist.variable} h-full antialiased`}>
       <body className="relative min-h-full bg-[#080810] text-slate-200">
-        <Suspense fallback={<WeatherBackdrop background={FALLBACK_ATMOSPHERE_CSS} />}>
+        <Suspense fallback={<WeatherBackdrop {...FALLBACK_ATMOSPHERE} />}>
           <WeatherBackdropLoader />
         </Suspense>
         {children}

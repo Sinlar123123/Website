@@ -12,15 +12,26 @@ export const FALLBACK_ATMOSPHERE_CSS = [
   "linear-gradient(180deg, #0d0d14 0%, #0a0a12 100%)",
 ].join(", ");
 
+export type AtmosphereKind = "clear" | "cloud" | "fog" | "rain" | "snow" | "storm";
+
 export type SpbAtmosphere = {
   /** Готовая строка для CSS `background` (несколько слоёв). */
   background: string;
-  /** Для отладки / метаданных */
   isDay: boolean;
   weatherCode: number;
+  /** Упрощённый тип погоды для визуальных эффектов на фоне. */
+  kind: AtmosphereKind;
 };
 
-function classifyWeather(code: number): "clear" | "cloud" | "fog" | "rain" | "snow" | "storm" {
+/** Если Open-Meteo недоступен — нейтральный дневной пасмурный сценарий. */
+export const FALLBACK_ATMOSPHERE: SpbAtmosphere = {
+  background: FALLBACK_ATMOSPHERE_CSS,
+  isDay: true,
+  weatherCode: -1,
+  kind: "cloud",
+};
+
+function classifyWeather(code: number): AtmosphereKind {
   if (code === 0) return "clear";
   if (code >= 1 && code <= 3) return "cloud";
   if (code === 45 || code === 48) return "fog";
@@ -127,13 +138,9 @@ export async function getSpbAtmosphere(): Promise<SpbAtmosphere> {
     const isDay = data.current?.is_day === 1;
     const kind = classifyWeather(weatherCode);
     const background = buildLayers(isDay, kind).join(", ");
-    return { background, isDay, weatherCode };
+    return { background, isDay, weatherCode, kind };
   } catch {
-    return {
-      background: FALLBACK_ATMOSPHERE_CSS,
-      isDay: true,
-      weatherCode: -1,
-    };
+    return { ...FALLBACK_ATMOSPHERE };
   } finally {
     clearTimeout(timeoutId);
   }
