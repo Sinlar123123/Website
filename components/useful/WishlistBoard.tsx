@@ -444,8 +444,9 @@ export default function WishlistBoard() {
         return;
       }
       setUserEmail(user.email);
+      const allowQuery = supabase.from("wishlist_allowlist").select("email").maybeSingle();
       const { data: row, error: allowErr } = await withTimeout(
-        supabase.from("wishlist_allowlist").select("email").maybeSingle(),
+        Promise.resolve(allowQuery),
         SUPABASE_REQUEST_MS,
         "Доступ к доске",
       );
