@@ -109,10 +109,15 @@ function buildLayers(isDay: boolean, kind: ReturnType<typeof classifyWeather>): 
   }
 }
 
+const OPEN_METEO_TIMEOUT_MS = 2500;
+
 export async function getSpbAtmosphere(): Promise<SpbAtmosphere> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OPEN_METEO_TIMEOUT_MS);
   try {
     const res = await fetch(OPEN_METEO, {
       next: { revalidate: 600 },
+      signal: controller.signal,
     });
     if (!res.ok) throw new Error(`open-meteo ${res.status}`);
     const data = (await res.json()) as {
@@ -129,5 +134,7 @@ export async function getSpbAtmosphere(): Promise<SpbAtmosphere> {
       isDay: true,
       weatherCode: -1,
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

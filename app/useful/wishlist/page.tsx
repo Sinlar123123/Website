@@ -19,8 +19,8 @@ export default function UsefulWishlistPage() {
       </Link>
       <h1 className="text-3xl sm:text-4xl font-black text-white mb-2">Доска хотелок</h1>
       <p className="text-slate-500 text-sm mb-8 max-w-2xl">
-        Четыре колонки: Настюшка, Данюшка, Семья и Мечты. Доступ только у почт из белого списка в Supabase (вы и
-        партнёр).
+        Пять колонок: Настюшка, Данюшка, Семья, мероприятия (концерты, театр, кино…) и мечты. Доступ только у почт из
+        белого списка в Supabase (вы и партнёр).
       </p>
       <WishlistBoard />
     </main>

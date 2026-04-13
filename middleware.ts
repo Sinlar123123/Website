@@ -19,5 +19,7 @@ export const config = {
     "/create-character",
     "/create-character/:path*",
     "/login",
+    "/useful",
+    "/useful/:path*",
   ],
 };

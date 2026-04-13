@@ -21,8 +21,12 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
+import { withTimeout } from "@/lib/with-timeout";
 
-type ColumnId = "nastyushka" | "danyushka" | "family" | "dreams";
+const SESSION_CHECK_MS = 8000;
+const SUPABASE_REQUEST_MS = 15000;
+
+type ColumnId = "nastyushka" | "danyushka" | "family" | "events" | "dreams";
 
 type WishlistRow = {
   id: string;
@@ -39,6 +43,11 @@ const COLUMNS: { id: ColumnId; title: string; hint: string }[] = [
   { id: "nastyushka", title: "Настюшка", hint: "Хотелки и приколы Настюшки" },
   { id: "danyushka", title: "Данюшка", hint: "Хотелки и приколы Данюшки" },
   { id: "family", title: "Семья", hint: "Общие на двоих" },
+  {
+    id: "events",
+    title: "Мероприятия",
+    hint: "Концерты, театр, кино, вечеринки",
+  },
   { id: "dreams", title: "Мечты", hint: "Большие и маленькие мечты" },
 ];
 
@@ -414,30 +423,51 @@ export default function WishlistBoard() {
   const bootstrap = useCallback(async () => {
     setLoading(true);
     setError("");
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user?.email) {
+    try {
+      // getUser() ходит на сервер Supabase и без таймаута может «висеть» минутами при сетевых проблемах.
+      const {
+        data: { session },
+        error: sessionErr,
+      } = await withTimeout(supabase.auth.getSession(), SESSION_CHECK_MS, "Проверка входа");
+      if (sessionErr) {
+        setError(sessionErr.message);
+        setUserEmail(null);
+        setAllowed(false);
+        setItems([]);
+        return;
+      }
+      const user = session?.user;
+      if (!user?.email) {
+        setUserEmail(null);
+        setAllowed(false);
+        setItems([]);
+        return;
+      }
+      setUserEmail(user.email);
+      const { data: row, error: allowErr } = await withTimeout(
+        supabase.from("wishlist_allowlist").select("email").maybeSingle(),
+        SUPABASE_REQUEST_MS,
+        "Доступ к доске",
+      );
+      if (allowErr) {
+        setError(allowErr.message);
+        setAllowed(false);
+        setItems([]);
+        return;
+      }
+      const isAllowed = !!row?.email;
+      setAllowed(isAllowed);
+      if (isAllowed) {
+        await withTimeout(loadItems(), SUPABASE_REQUEST_MS, "Загрузка карточек");
+      } else setItems([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось загрузить доску.");
       setUserEmail(null);
       setAllowed(false);
       setItems([]);
+    } finally {
       setLoading(false);
-      return;
     }
-    setUserEmail(user.email);
-    const { data: row, error: allowErr } = await supabase.from("wishlist_allowlist").select("email").maybeSingle();
-    if (allowErr) {
-      setError(allowErr.message);
-      setAllowed(false);
-      setItems([]);
-      setLoading(false);
-      return;
-    }
-    const isAllowed = !!row?.email;
-    setAllowed(isAllowed);
-    if (isAllowed) await loadItems();
-    else setItems([]);
-    setLoading(false);
   }, [supabase, loadItems]);
 
   useEffect(() => {
@@ -703,6 +733,7 @@ export default function WishlistBoard() {
       nastyushka: [],
       danyushka: [],
       family: [],
+      events: [],
       dreams: [],
     };
     for (const row of items) {
@@ -864,7 +895,7 @@ export default function WishlistBoard() {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
           {COLUMNS.map((col) => (
             <DroppableColumn key={col.id} col={col} isEmpty={byColumn[col.id].length === 0}>
               {byColumn[col.id].map((card) => (
